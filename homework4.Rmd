@@ -1,0 +1,198 @@
+---
+title: "homework4"
+author: "Yamei Li, Meirou Guan, Tamires Amorim, Carol-Ann Jackson"
+date: "10/13/2020"
+output: html_document
+---
+```{r}
+setwd("/Users/yameili/Desktop/ecob2000_lecture1/acs2017_ny")
+load("acs2017_ny_data.Rdata")
+attach(acs2017_ny)
+use_varb <- (AGE >= 25) & (AGE <= 55) & (LABFORCE == 2) & (WKSWORK2 > 4) & (UHRSWORK >= 35)
+dat_use <- subset(acs2017_ny,use_varb) # 
+detach()
+attach(dat_use)
+```
+
+This selects people 25-55 (often called prime age), in labor force, working year round, fulltime, We'll figure out what factors affect income wages, first, we guess these factors can influence the income wages, and then we build a model to test.
+```{r}
+model_temp1 <- lm(INCWAGE ~ AGE + female + AfAm + Asian + Amindian + race_oth + Hispanic + educ_hs + educ_somecoll + educ_college + educ_advdeg)
+summary(model_temp1)
+par(mfrow=c(2,2))
+plot(model_temp1,col="blue",pch=16,cex=1,lwd=1,lty=2)
+require(stargazer)
+stargazer(model_temp1, type = "text")
+```
+from the graph, we can see that the p-value of Asian is 0.679188 and the p-value of Amindian is 0.144971,We can infer that the regression coefficients of these two variables are not significant, so we need to consider whether these two variables are suitable for our model. Besides,the Multiple R-squared is 0.15,This model can only explain the variance of 15%, so we need to optimize it.
+
+Model optimization
+we need to draw the scatter graph between incomewage and Amindian,incomewageand Asian.
+```{r}
+nasian<-as.numeric(as.character(dat_use$INCWAGE))
+par(mfrow=c(2,2))
+Wage_asian<-lm(INCWAGE~Asian)
+plot(Wage_asian,col="purple",pch=14,cex=1,lwd=1,lty=2)
+summary(Wage_asian)
+```
+```{r}
+nasian<-as.numeric(as.character(dat_use$INCWAGE))
+par(mfrow=c(2,2))
+Wage_amindian<-lm(INCWAGE~Amindian)
+plot(Wage_amindian,col="purple",pch=14,cex=1,lwd=1,lty=2)
+summary(Wage_amindian)
+```
+According to the graph, there is no direct relationship between these two variables and incomewage, we should remove these two variables from the model1, and then carry out a stepwise regression,
+
+```{r}
+step(model_temp1)
+```
+
+When we did the stepwise regression, the original AIC value was 1056708. In the first regression, we removed the Variable Asian and the AIC value changed to 1056706, which is consistent with our judgment based on the figure above.so we need to delete Asian variable and Amindian varible.
+Next, we will analyze the impact of each variable on wages. 
+AGE~INCOME WAGE
+
+```{r}
+NNobs <- length(INCWAGE)
+set.seed(00000)
+graph_obs <- (runif(NNobs) < 0.1) 
+dat_graph <-subset(dat_use,graph_obs)
+plot(INCWAGE ~ jitter(AGE, factor = 2), pch = 19, col = rgb(0.3, 0.4, 0.5, alpha = 0.8), ylim = c(0,150000), data = dat_graph)
+to_be_predicted2 <- data.frame(AGE = 25:55, female = 1, AfAm = 0, Asian = 0, Amindian = 1, race_oth = 1, Hispanic = 1, educ_hs = 0, educ_somecoll = 0, educ_college = 1, educ_advdeg = 0)
+to_be_predicted2$yhat <- predict(model_temp1, newdata = to_be_predicted2)
+lines(yhat ~ AGE, data = to_be_predicted2, col="red",cex=2,lwd=2,lty=2)
+
+                 
+```
+ 
+```{r}
+nage<-as.numeric(as.character(dat_use$INCWAGE))
+par(mfrow=c(2,2))
+Wage_age<-lm(INCWAGE~AGE)
+plot(Wage_age,col="pink",pch=20,cex=1,lwd=1,lty=1)
+summary(Wage_age)
+```
+  As can be seen from the figure, age has positively correlated with income wage. From the age of 25 to 55, the income increases with the increase of age. In addition, the income of different age groups is concentrated between 3000 and 10000, and the number of people with income reaching 150,000 increases from the age of 40.
+
+To improve the accuracy, we performed polynomial regression on the independent variable of age.
+  
+```{r}
+nage<-as.numeric(as.character(dat_use$INCWAGE))
+par(mfrow=c(2,2))
+Wage_age2<-lm(INCWAGE~AGE+I(AGE^2),data=dat_use)
+plot(Wage_age2,col="pink",pch=20,cex=1,lwd=1,lty=1)
+summary(Wage_age2)
+```
+After polynomial regression, we can see that the accuracy has been improved, indicating that age has a great influence on salary.
+
+female~INCOME WAGE
+
+```{r}
+str(female)
+model_temp2 <- lm(INCWAGE ~ female, data = dat_use)
+par(mfrow=c(2,2))
+plot(model_temp2, col="gray")
+summary(model_temp2)
+```
+F test:p-value: < 2.2e-16, There is a relationship between gender and income.
+```{r}
+SEX_f <- factor(dat_use$SEX)
+summary(SEX_f)
+boxplot(dat_use$INCWAGE~dat_use$SEX,data=dat_use,col="red",main="wage~sex",xlab="income",ylab="sex",horizontal = TRUE)
+
+```
+we can see that the mean of male's wage greater than the mean of female's wage,and for the number of max wage,male are more than the female.In high-income groups, men exceed women.
+```{r}
+model_temp3 <- lm(INCWAGE ~educ_advdeg, data = dat_use)
+par(mfrow=c(2,2))
+plot(model_temp3,col="green")
+summary(model_temp3)
+```
+
+```{r}
+model_temp4 <- lm(INCWAGE ~educ_advdeg, data = dat_use)
+par(mfrow=c(2,2))
+plot(model_temp4,col="green")
+summary(model_temp4)
+```
+```{r}
+model_temp5 <- lm(INCWAGE ~educ_advdeg+I(educ_advdeg^2), data = dat_use)
+par(mfrow=c(2,2))
+plot(model_temp5,col="green")
+summary(model_temp5)
+```
+
+```{r}
+new.model<-lm(INCWAGE ~AGE+ female + educ_somecoll + educ_college + educ_advdeg,data = dat_use)
+par(mfrow=c(2,2))
+plot(new.model,col="gold",pch=20,cex=1,lwd=1,lty=1)
+require(stargazer)
+stargazer(new.model, type = "text")
+```{r}
+
+```
+
+```{r}
+lm1<-lm(INCWAGE ~AGE+ female + educ_somecoll + educ_college + educ_advdeg,data = dat_use)
+summary(lm1)
+
+```
+y=-3048.08+1343.87X1-25581.84X2+14406.76X3+49929.34X4+75991.16X5
+```{r}
+par(mfrow=c(2,2))
+plot(lm1,col="orange",pch=5,cex=1)
+```
+```{r}
+lm2<-update(lm1,.~. -female)
+summary(lm2)
+par(mfrow=c(2,2))
+plot(lm2,col="orange")
+```
+
+```{r}
+lm3<-update(lm1,.~. -female-AGE)
+summary(lm3)
+par(mfrow=c(2,2))
+plot(lm3,col="orange")
+```
+```{r}
+lm4<-update(lm1,.~. +female*AGE)
+summary(lm4)
+par(mfrow=c(2,2))
+plot(lm4,col="orange")
+```
+
+```{r}
+new<-data.frame(female=0,AGE = 35,educ_somecoll = 0, educ_college = 1, educ_advdeg = 0)
+lm.pred<-predict(lm1,new,interval="prediction",level=0.95)
+lm.pred
+```
+we can predict a man who has a college educational level, at age 35, his income interval=(-56887,244720.5) at the 95% confidence level.
+
+In conclusion.
+Age, gender and education background are both factors affecting income, among which the average income of males is greater than that of females. Moreover, in high-income groups, the number of males is greater than that of females. For education background, the higher education background is, the higher income is, and the income of people with a graduate degree is much higher than that of people with a high school education.
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
