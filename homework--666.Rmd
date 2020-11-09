@@ -1,0 +1,117 @@
+---
+title: "Homework 6"
+author: "Yamei Li, Meirou Guan, Tamires Amorim, Carol-Ann Jackson"
+date: "11/9/2020"
+output: html_document
+---
+```{r}
+setwd("/Users/yameili/Desktop/ecob2000_lecture1/acs2017_ny")
+load("acs2017_ny_data.Rdata")
+attach(acs2017_ny)
+```
+
+```{r}
+#convert the LABFORCE and MARST from numeric to factor
+str(LABFORCE)
+str(MARST)
+acs2017_ny$LABFORCE <- as.factor(acs2017_ny$LABFORCE)
+levels(acs2017_ny$LABFORCE) <- c("NA","Not in LF","in LF")
+
+acs2017_ny$MARST <- as.factor(acs2017_ny$MARST)
+levels(acs2017_ny$MARST) <- c("married spouse present","married spouse absent","separated","divorced","widowed","never married")
+```
+```{r}
+str(LABFORCE)
+str(MARST)
+```
+
+```{r}
+#cut age into different range
+acs2017_ny$age_bands <- cut(acs2017_ny$AGE,breaks=c(0,25,35,45,55,65,100))
+table(acs2017_ny$age_bands,acs2017_ny$LABFORCE)
+```
+NA means them maybe too younger to have a job,because the NA exist in (0,25]. 
+```{r}
+pick_use1 <- (acs2017_ny$AGE >25) & (acs2017_ny$AGE <= 55)
+dat_use1 <- subset(acs2017_ny, pick_use1)
+
+dat_use1$LABFORCE <- droplevels(dat_use1$LABFORCE)
+str(dat_use1$LABFORCE)
+```
+
+
+```{r}
+# add mortgage into the binomial logitistic regression model
+model_logit1 <- glm(LABFORCE ~ AGE + I(AGE^2) + female + MORTGAGE+ AfAm + Asian + race_oth + Hispanic 
+            + educ_hs + educ_somecoll + educ_college + educ_advdeg 
+            + MARST,
+            family = binomial, data = dat_use1)
+summary(model_logit1)
+```
+dependent variable: in the laborforce and not in the laborforce,from the result, we can see that female、 MORTGAGE、Hispanic、educ_hs、educ_somecoll、educ_college、educ_advdeg、MARSTmarried spouse absent、MARSTdivorced 、MARSTnever married are all significantly. some of them ar not significantly.
+```{r}
+install.packages("car")
+library(car)
+vif(model_logit1)
+```
+
+
+we can see except age and age^2, the GVIF of rest of them  are less than 2. it means multicolinearity is small.
+
+```{r}
+#HL test
+install.packages("generalhoslem")
+library(generalhoslem)
+logitgof(dat_use1$LABFORCE,fitted(model_logit1))
+```
+
+
+
+```{r}
+or<-exp((summary(model_logit1))$coef[,'Estimate'])
+or
+```
+Through the HL test, we can see female are more likely not in the laborforce, someone never married or spouse absent are also more likely not in the laborforce, however, if someone have college or advance college educational degree, they have huge probability in the laborforce.
+
+```{r}
+#Predict
+set.seed(11111)
+index<-sample(x=2,size=nrow(dat_use1),replace=TRUE,prob=c(0.7,0.3))
+train<-dat_use1[index==1,]
+test<-dat_use1[index==2,]
+dim(dat_use1)
+dim(train)
+dim(test)
+trainmodel<-glm(LABFORCE ~AGE + I(AGE^2) +female + MORTGAGE+ AfAm + Asian + Hispanic 
+            + educ_hs + educ_somecoll + educ_college + educ_advdeg 
+            + MARST,
+            family = binomial, data = train)
+prob<-predict(object=trainmodel,newdata=test,type="response")# use the trainmodel to predict
+pred<-cbind(test,prob)
+pred<-transform(pred,predict=ifelse(prob<=0.5,0,1)) #Reclassify the predicted probability values
+ta<-table(pred$LABFORCE,pred$predict) #Compare the actual and predicted values of the model
+ta
+sum_diag<-sum(diag(ta)) #the sum of the correct predict Numbers
+sum<-sum(ta) #the sum of predict Numbers
+sum_diag/sum #Prediction accuracy
+```
+the prediction accuracy is 0.8181047.
+```{r}
+#ROC CURVE
+install.packages("pROC")
+library(pROC)
+```
+```{r}
+roc_curve<-roc(test$LABFORCE,prob)
+x<-1-roc_curve$specificities
+y<-roc_curve$sensitivities
+plot(x=x,y=y,xlim=c(0,1),ylim=c(0,1),xlab="1-specificity",
+ylab="sensitivity",main="ROC Curve",type="l",lwd=2)
+abline(a=0,b=1,col="grey")
+auc<-roc_curve$auc
+text(0.5,0.4,paste("AUC",round(auc,digits=2)),col="blue")
+```
+
+The AUC=0.72, less than 0.75, maybe the accuracy of this model is not particularly good.
+
+
