@@ -298,6 +298,6 @@ auc<-roc_curve$auc
 text(0.5,0.4,paste("AUC",round(auc,digits=2)),col="blue")
 ```
 
-![](homework-----6666_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+![](homework-----6666_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 The AUC=0.72, less than 0.75, maybe the accuracy of this model is not
 particularly good.
