@@ -3,7 +3,9 @@ title: "homework6"
 author: "Yamei Li, Meirou Guan, Tamires Amorim, Carol-Ann Jackson"
 date: "11/9/2020"
 output: github_document
+
 ---
+
 ```{r}
 setwd("/Users/yameili/Desktop/ecob2000_lecture1/acs2017_ny")
 load("acs2017_ny_data.Rdata")
@@ -48,14 +50,13 @@ summary(model_logit1)
 dependent variable: in the laborforce and not in the laborforce,from the result, we can see that female、 MORTGAGE、Hispanic、educ_hs、educ_somecoll、educ_college、educ_advdeg、MARSTmarried spouse absent、MARSTdivorced 、MARSTnever married are all significantly. some of them ar not significantly.
 
 ```{r}
-install.packages("car")
 library(car)
 vif(model_logit1)
 ```
 we can see except age and age^2, the GVIF of rest of them  are less than 2. it means multicolinearity is small.
 ```{r}
 #HL test
-install.packages("generalhoslem")
+
 library(generalhoslem)
 logitgof(dat_use1$LABFORCE,fitted(model_logit1))
 ```
@@ -87,12 +88,12 @@ sum<-sum(ta) #the sum of predict Numbers
 sum_diag/sum #Prediction accuracy
 ```
 the prediction accuracy is 0.8181047.
+
+
+
 ```{r}
 #ROC CURVE
-install.packages("pROC")
-library('pROC')
-```
-```{r}
+library(pROC)
 roc_curve<-roc(test$LABFORCE,prob)
 x<-1-roc_curve$specificities
 y<-roc_curve$sensitivities
@@ -106,9 +107,12 @@ The AUC=0.72, less than 0.75, maybe the accuracy of this model is not particular
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
 
 
 
